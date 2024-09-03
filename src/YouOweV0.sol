@@ -9,6 +9,7 @@ contract YouOwe {
         address creditor; // the person who is owed money
         address debtor; // the person who owes money
         uint256 amount; // the amount owed in wei
+        string description; // a description of the debt
     }
 
     mapping(uint256 => Debt) public debts;
@@ -19,19 +20,22 @@ contract YouOwe {
         uint256 id,
         address indexed creditor,
         address indexed debtor,
-        uint256 amount
+        uint256 amount,
+        string debtDescription
     );
     event DebtSettled(
         uint256 id,
         address indexed creditor,
         address indexed debtor,
-        uint256 amount
+        uint256 amount,
+        string debtDescription
     );
     event DebtCancelled(
         uint256 id,
         address indexed creditor,
         address indexed debtor,
-        uint256 amount
+        uint256 amount,
+        string debtDescription
     );
 
     // Custom errors
@@ -40,6 +44,8 @@ contract YouOwe {
     error OnlyCreditorCanCancel();
     error IncorrectAmountSent();
     error InsufficientBalance(uint256 required, uint256 available);
+    error TransferFailed();
+    error YouCannotOweYourself();
 
     // Modifiers
     modifier debtExists(uint256 _debtId) {
@@ -74,14 +80,32 @@ contract YouOwe {
     }
 
     function createDebt(
-        address _creditor,
         address _debtor,
-        uint256 _amount
+        uint256 _amount,
+        string memory _description
     ) external {
-        debtCounter++;
-        debts[debtCounter] = Debt(debtCounter, _creditor, _debtor, _amount);
+        if (_debtor == msg.sender) {
+            revert YouCannotOweYourself();
+        }
 
-        emit DebtCreated(debtCounter, _creditor, _debtor, _amount);
+        debtCounter++;
+        debts[debtCounter] = Debt(
+            debtCounter,
+            msg.sender,
+            _debtor,
+            _amount,
+            _description
+        );
+        debtsOwedTo[msg.sender].push(debtCounter);
+        debtsOwedBy[_debtor].push(debtCounter);
+
+        emit DebtCreated(
+            debtCounter,
+            msg.sender,
+            _debtor,
+            _amount,
+            _description
+        );
     }
 
     function settleDebt(
@@ -99,10 +123,6 @@ contract YouOwe {
         if (msg.value != debt.amount) {
             revert IncorrectAmountSent();
         }
-
-        // Transfer the amount to the creditor
-        payable(debt.creditor).transfer(msg.value);
-
         // Remove the debt ID from the debtsOwedTo and debtsOwedBy mappings
         removeDebtFromArray(debtsOwedTo[debt.creditor], _debtId);
         removeDebtFromArray(debtsOwedBy[debt.debtor], _debtId);
@@ -111,7 +131,19 @@ contract YouOwe {
         delete debts[_debtId];
 
         // Emit the DebtSettled event
-        emit DebtSettled(_debtId, debt.creditor, debt.debtor, debt.amount);
+        emit DebtSettled(
+            _debtId,
+            debt.creditor,
+            debt.debtor,
+            debt.amount,
+            debt.description
+        );
+
+        // Transfer the amount to the creditor
+        (bool success, ) = debt.creditor.call{value: msg.value}("");
+        if (!success) {
+            revert TransferFailed();
+        }
     }
 
     function cancelDebt(
@@ -127,7 +159,13 @@ contract YouOwe {
         delete debts[_debtId];
 
         // Emit the DebtCancelled event
-        emit DebtCancelled(_debtId, debt.creditor, debt.debtor, debt.amount);
+        emit DebtCancelled(
+            _debtId,
+            debt.creditor,
+            debt.debtor,
+            debt.amount,
+            debt.description
+        );
     }
 
     function removeDebtFromArray(
