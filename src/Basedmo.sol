@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Basedmo {
+    IERC20 public usdcToken;
     uint256 private debtCounter;
 
     struct Debt {
@@ -48,6 +49,11 @@ contract Basedmo {
     error InsufficientBalance(uint256 required, uint256 available);
     error TransferFailed();
     error YouCannotOweYourself();
+    error InsufficientUSDC(uint256 required, uint256 available);
+
+    constructor(address _usdcTokenAddress) {
+        usdcToken = IERC20(_usdcTokenAddress);
+    }
 
     // Modifiers
     modifier debtExists(uint256 _debtId) {
@@ -121,10 +127,12 @@ contract Basedmo {
     {
         Debt storage debt = debts[_debtId];
 
-        // Check if the sent amount matches the debt amount
-        if (msg.value != debt.amount) {
-            revert IncorrectAmountSent();
+        // Check if the debtor has enough USDC tokens
+        uint256 debtorBalance = usdcToken.balanceOf(msg.sender);
+        if (debtorBalance < debt.amount) {
+            revert InsufficientUSDC(debt.amount, debtorBalance);
         }
+
         // Remove the debt ID from the debtsOwedTo and debtsOwedBy mappings
         removeDebtFromArray(debtsOwedTo[debt.creditor], _debtId);
         removeDebtFromArray(debtsOwedBy[debt.debtor], _debtId);
@@ -141,8 +149,13 @@ contract Basedmo {
             debt.description
         );
 
-        // Transfer the amount to the creditor
-        (bool success, ) = debt.creditor.call{value: msg.value}("");
+        // Transfer USDC tokens from the debtor to the creditor
+        bool success = usdcToken.transferFrom(
+            msg.sender,
+            debt.creditor,
+            debt.amount
+        );
+
         if (!success) {
             revert TransferFailed();
         }
