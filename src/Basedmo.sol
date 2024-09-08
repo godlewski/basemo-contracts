@@ -120,7 +120,6 @@ contract Basedmo {
         uint256 _debtId
     )
         external
-        payable
         debtExists(_debtId)
         onlyDebtor(_debtId)
         sufficientBalance(_debtId)
