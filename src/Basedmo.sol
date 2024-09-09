@@ -78,11 +78,9 @@ contract Basedmo {
     }
 
     modifier sufficientBalance(uint256 _debtId) {
-        if (msg.sender.balance < debts[_debtId].amount) {
-            revert InsufficientBalance(
-                debts[_debtId].amount,
-                msg.sender.balance
-            );
+        uint256 debtorBalance = usdcToken.balanceOf(msg.sender);
+        if (debtorBalance < debts[_debtId].amount) {
+            revert InsufficientUSDC(debts[_debtId].amount, debtorBalance);
         }
         _;
     }
@@ -132,6 +130,17 @@ contract Basedmo {
             revert InsufficientUSDC(debt.amount, debtorBalance);
         }
 
+        // Transfer USDC tokens from the debtor to the creditor
+        bool success = usdcToken.transferFrom(
+            msg.sender,
+            debt.creditor,
+            debt.amount
+        );
+
+        if (!success) {
+            revert TransferFailed();
+        }
+
         // Remove the debt ID from the debtsOwedTo and debtsOwedBy mappings
         removeDebtFromArray(debtsOwedTo[debt.creditor], _debtId);
         removeDebtFromArray(debtsOwedBy[debt.debtor], _debtId);
@@ -147,17 +156,6 @@ contract Basedmo {
             debt.amount,
             debt.description
         );
-
-        // Transfer USDC tokens from the debtor to the creditor
-        bool success = usdcToken.transferFrom(
-            msg.sender,
-            debt.creditor,
-            debt.amount
-        );
-
-        if (!success) {
-            revert TransferFailed();
-        }
     }
 
     function cancelDebt(
