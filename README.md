@@ -1,66 +1,32 @@
-## Foundry
+## basemo-contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This repo contains the smart contracts used to power [basemo](https://basemo.vercel.app/), a dapp built on the Base network that enables p2p payment requests and debt settlements.
 
-Foundry consists of:
+The mission of this project is to provide an open source protocol for anyone to build a Venmo/Cashapp/Zelle like client. Its far from complete so use at your own risk.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+The contract is currently deployed on Base Sepolia at [0xc6a51510147405fa576C2D81b741F976C732a537](https://sepolia.basescan.org/address/0xc6a51510147405fa576C2D81b741F976C732a537)
 
-## Documentation
+Functionality is currently limited to request a payment, settle a debt, and a cancel debt. More to come.
 
-https://book.getfoundry.sh/
+## Deployment
 
-## Usage
+You'll need to have Foundry set up, checkout the docs here: https://book.getfoundry.sh/
 
-### Build
+You'll also need a .env, here is a sample:
 
-```shell
-$ forge build
+```
+BASE_SEPOLIA_USDC_CONTRACT_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+BASESCAN_API_KEY=<YOU'LL NEED TO GET YOUR OWN API KEY>
+
 ```
 
-### Test
+There is a deployment script you can use once your env is properly set up.
 
-```shell
-$ forge test
+```bash
+forge script script/DeployBasedmo.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --account deployer --broadcast
 ```
 
-### Format
+## Contact me
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+Reach out X: https://x.com/stevegodlewski
