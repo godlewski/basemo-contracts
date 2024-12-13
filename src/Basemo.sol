@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-    IERC20Upgradeable public usdcToken;
+    IERC20 public usdcToken;
     uint256 private debtCounter;
 
     struct Debt {
@@ -54,7 +54,6 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     error YouCannotOweYourself();
     error InsufficientUSDC(uint256 required, uint256 available);
 
-    // Keep all the same modifiers
     modifier debtExists(uint256 _debtId) {
         if (debts[_debtId].id == 0) {
             revert DebtDoesNotExist();
@@ -93,7 +92,7 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         __Ownable_init();
         __UUPSUpgradeable_init();
 
-        usdcToken = IERC20Upgradeable(_usdcTokenAddress);
+        usdcToken = IERC20(_usdcTokenAddress);
     }
 
     // Required by UUPSUpgradeable
@@ -101,7 +100,6 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address newImplementation
     ) internal override onlyOwner {}
 
-    // Keep all the original functions with their modifiers
     function createDebt(
         address _debtor,
         uint256 _amount,
