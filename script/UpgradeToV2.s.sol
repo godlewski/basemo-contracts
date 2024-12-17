@@ -7,7 +7,7 @@ import "../src/BasemoV2.sol";
 
 contract UpgradeToV2 is Script {
     function run() external {
-        address proxyAddress = vm.envAddress("PROXY_ADDRESS");
+        address proxyAddress = vm.envAddress("PROXY_CONTRACT_ADDRESS");
 
         vm.startBroadcast();
 
@@ -17,9 +17,6 @@ contract UpgradeToV2 is Script {
         // 2. Upgrade proxy to V2
         Basemo proxy = Basemo(proxyAddress);
         proxy.upgradeTo(address(implementationV2));
-
-        // 3. Set initial max debt amount
-        BasemoV2(proxyAddress).setMaxDebtAmount(1000 ether);
 
         console.log(
             "V2 Implementation deployed to:",

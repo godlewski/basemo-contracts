@@ -16,6 +16,7 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address debtor;
         uint256 amount;
         string description;
+        uint256[50] __gap; // Adding a large gap for now, this will allow us to add more fields in upgraded versions of the contract
     }
 
     mapping(uint256 => Debt) public debts;
@@ -89,7 +90,7 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function initialize(address _usdcTokenAddress) public initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
 
         usdcToken = IERC20(_usdcTokenAddress);
