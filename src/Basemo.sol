@@ -2,11 +2,19 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 
-contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract Basemo is
+    Initializable,
+    ERC1155Upgradeable,
+    EIP712Upgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     IERC20 public usdcToken;
     uint256 private debtCounter;
 
@@ -89,7 +97,12 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address _usdcTokenAddress) public initializer {
+    function initialize(
+        address _usdcTokenAddress,
+        string memory _uri
+    ) public initializer {
+        __ERC1155_init(_uri);
+        __EIP712_init("Basemo", "1");
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
 
@@ -121,6 +134,8 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         debtsOwedTo[msg.sender].push(debtCounter);
         debtsOwedBy[_debtor].push(debtCounter);
 
+        _mint(_debtor, debtCounter, 1, "");
+
         emit DebtCreated(
             debtCounter,
             msg.sender,
@@ -140,13 +155,11 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     {
         Debt storage debt = debts[_debtId];
 
-        // Check if the debtor has enough USDC tokens
         uint256 debtorBalance = usdcToken.balanceOf(msg.sender);
         if (debtorBalance < debt.amount) {
             revert InsufficientUSDC(debt.amount, debtorBalance);
         }
 
-        // Transfer USDC tokens from the debtor to the creditor
         bool success = usdcToken.transferFrom(
             msg.sender,
             debt.creditor,
@@ -157,14 +170,13 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             revert TransferFailed();
         }
 
-        // Remove the debt ID from the debtsOwedTo and debtsOwedBy mappings
+        _burn(debt.debtor, _debtId, 1);
+
         removeDebtFromArray(debtsOwedTo[debt.creditor], _debtId);
         removeDebtFromArray(debtsOwedBy[debt.debtor], _debtId);
 
-        // Delete the debt from the debts mapping
         delete debts[_debtId];
 
-        // Emit the DebtSettled event
         emit DebtSettled(
             _debtId,
             debt.creditor,
@@ -179,14 +191,13 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     ) external debtExists(_debtId) onlyCreditor(_debtId) {
         Debt storage debt = debts[_debtId];
 
-        // Remove the debt ID from the debtsOwedTo and debtsOwedBy mappings
+        _burn(debt.debtor, _debtId, 1);
+
         removeDebtFromArray(debtsOwedTo[debt.creditor], _debtId);
         removeDebtFromArray(debtsOwedBy[debt.debtor], _debtId);
 
-        // Delete the debt from the debts mapping
         delete debts[_debtId];
 
-        // Emit the DebtCancelled event
         emit DebtCancelled(
             _debtId,
             debt.creditor,
@@ -229,5 +240,21 @@ contract Basemo is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             result[i] = debts[debtIds[i]];
         }
         return result;
+    }
+
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        // Only allow minting and burning, no transfers
+        if (from != address(0) && to != address(0)) {
+            revert("Soulbound: tokens are non-transferable");
+        }
     }
 }

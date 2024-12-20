@@ -19,7 +19,8 @@ contract DeployBasemo is Script {
         // 2. Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
             Basemo.initialize.selector,
-            usdcAddress
+            usdcAddress,
+            "https://your-metadata-uri.com/api/{id}"
         );
 
         // 3. Deploy proxy
